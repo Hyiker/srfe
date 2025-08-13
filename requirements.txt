@@ -1,0 +1,4 @@
+mitsuba
+numpy
+matplotlib
+# Add other dependencies as needed
