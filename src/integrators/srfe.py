@@ -1,6 +1,7 @@
 import mitsuba as mi
 import drjit as dr
 from integrators.utils import mis_power_heuristic
+from integrators.stylizers import create_stylizer
 
 
 class SRFEIntegrator(mi.SamplingIntegrator):
@@ -25,12 +26,9 @@ class SRFEIntegrator(mi.SamplingIntegrator):
         self.ge_sample_count = props.get(
             "ge_sample_count", 4
         )  # Stylization group estimator samples
-
-    def grayscale_stylize(self, radiance: mi.Spectrum) -> mi.Spectrum:
-        color = mi.Color3f(radiance)
-        # Apply a simple grayscale gradient stylization
-        gray = 0.2989 * color.x + 0.5870 * color.y + 0.1140 * color.z
-        return mi.Spectrum(gray)
+        # mitsuba only support custom field value
+        # TODO: use <stylizer> tag
+        self.stylizer = create_stylizer(props.get("stylizer_type"), props)
 
     @dr.syntax(recursive=True)
     def style_shading(
@@ -121,11 +119,11 @@ class SRFEIntegrator(mi.SamplingIntegrator):
 
             # Total outgoing
             L_sample = L_dir + bsdf_weight * L_indirect * dr.rcp(rr_prob)
-            L_sample = self.grayscale_stylize(L_sample)
             L += L_sample
             sample_idx -= 1
 
         L /= mi.Float32(stylize_sample)
+        L = self.stylizer.apply(L)
 
         return L, active
 
